@@ -43,14 +43,15 @@ class EventStoreClient:
         }
         self.post_events(stream_name, [event])
 
-    def get_stream_info(self, stream_name):
+    def get_stream_head(self, stream_name):
         url = self.base_url + '/streams/' + stream_name
         headers = {'Accept': 'application/vnd.eventstore.events+json'}
         response = requests.get(url, headers=headers)
         return StreamPage(response.json())
 
-    def get_all_events(self, stream_name, events_per_page=20):
-        url = self.base_url + "/streams/{}/0/forward/{}".format(stream_name, events_per_page)
+    def get_all_events(self, stream_name):
+        head = self.get_stream_head(stream_name)
+        url = head.links.get('last', None)
         while url:
             headers = {'Accept': 'application/vnd.eventstore.events+json'}
             response = requests.get(url, headers=headers)
