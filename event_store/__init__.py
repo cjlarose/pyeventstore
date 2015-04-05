@@ -3,6 +3,7 @@ import uuid
 import time
 
 import requests
+from requests.exceptions import HTTPError
 
 def links_as_dict(links):
     result = {}
@@ -64,6 +65,7 @@ class EventStoreClient:
     def get_stream_page(self, uri):
         headers = {'Accept': 'application/vnd.eventstore.events+json'}
         response = requests.get(uri, headers=headers)
+        response.raise_for_status()
         content = response.json()
         return StreamPage(content)
 
@@ -87,7 +89,16 @@ class EventStoreClient:
             uri = current_page.links.get('previous', None)
 
     def subscribe(self, stream_name, interval_seconds=1):
-        last = self.get_stream_head(stream_name).links['previous']
+        last = None
+        while last is None:
+            try:
+                last = self.get_stream_head(stream_name).links['previous']
+            except HTTPError as e:
+                if e.response.status_code == 404:
+                    time.sleep(interval_seconds)
+                else:
+                    raise e
+
         while True:
             page = self.get_stream_page(last)
             yield from self.fetch_events(page.entries())
