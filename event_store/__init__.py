@@ -69,7 +69,7 @@ class EventStoreClient:
             page = self.get_stream_page(last)
             yield from page.entries()
 
-            current = page.links['previous'] if 'previous' in page.links else last
+            current = page.links.get('previous', last)
             if last == current:
                 time.sleep(interval_seconds)
             last = current
