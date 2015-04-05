@@ -1,5 +1,6 @@
 import json
 import uuid
+import time
 
 import requests
 
@@ -61,3 +62,14 @@ class EventStoreClient:
             current_page = self.get_stream_page(uri)
             yield from current_page.entries()
             uri = current_page.links.get('previous', None)
+
+    def subscribe(self, stream_name, interval_seconds=1):
+        last = self.get_stream_head(stream_name).links['previous']
+        while True:
+            page = self.get_stream_page(last)
+            yield from page.entries()
+
+            current = page.links['previous'] if 'previous' in page.links else last
+            if last == current:
+                time.sleep(interval_seconds)
+            last = current
