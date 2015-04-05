@@ -107,3 +107,18 @@ class EventStoreClient:
             if last == current:
                 time.sleep(interval_seconds)
             last = current
+
+    def get_projection(self, projection_name):
+        uri = self.base_url + '/projection/{}'.format(projection_name)
+        headers = {'Accept': 'application/json'}
+        response = requests.get(uri, headers=headers)
+        return response.json()
+
+    def get_projection_state(self, projection_name, partition=None):
+        uri = self.base_url + '/projection/{}/state'.format(projection_name)
+        headers = {'Accept': 'application/json'}
+        params = {}
+        if partition:
+            params['partition'] = partition
+        response = requests.get(uri, headers=headers, params=params)
+        return response.json()
