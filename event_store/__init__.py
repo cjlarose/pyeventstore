@@ -1,6 +1,7 @@
 import json
-import requests
 import uuid
+
+import requests
 
 class StreamPage:
     def __init__(self, content):
@@ -43,18 +44,20 @@ class EventStoreClient:
         }
         self.post_events(stream_name, [event])
 
-    def get_stream_head(self, stream_name):
-        url = self.base_url + '/streams/' + stream_name
+    def get_stream_page(self, uri):
         headers = {'Accept': 'application/vnd.eventstore.events+json'}
-        response = requests.get(url, headers=headers)
-        return StreamPage(response.json())
+        response = requests.get(uri, headers=headers)
+        content = response.json()
+        return StreamPage(content)
+
+    def get_stream_head(self, stream_name):
+        uri = self.base_url + '/streams/' + stream_name
+        return self.get_stream_page(uri)
 
     def get_all_events(self, stream_name):
         head = self.get_stream_head(stream_name)
-        url = head.links.get('last', None)
-        while url:
-            headers = {'Accept': 'application/vnd.eventstore.events+json'}
-            response = requests.get(url, headers=headers)
-            current_page = StreamPage(response.json())
+        uri = head.links.get('last', None)
+        while uri:
+            current_page = self.get_stream_page(uri)
             yield from current_page.entries()
-            url = current_page.links.get('previous', None)
+            uri = current_page.links.get('previous', None)
