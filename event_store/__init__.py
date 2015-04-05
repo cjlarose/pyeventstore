@@ -4,22 +4,38 @@ import time
 
 import requests
 
-class StreamPage:
+def links_as_dict(links):
+    result = {}
+    for link in links:
+        result[link['relation']] = link['uri']
+    return result
+
+class StreamEntry:
     def __init__(self, content):
-        self._content = content 
+        self._content = content
         self._links = None
-        #self.head_of_stream = content['headOfStream']
+        self.summary = content['summary']
 
     @property
     def links(self):
         if self._links is None:
-            self._links = {}
-            for link in self._content['links']:
-                self._links[link['relation']] = link['uri']
+            self._links = links_as_dict(self._content['links'])
+        return self._links
+
+class StreamPage:
+    def __init__(self, content):
+        self._content = content 
+        self._links = None
+
+    @property
+    def links(self):
+        if self._links is None:
+            self._links = links_as_dict(self._content['links'])
         return self._links
 
     def entries(self):
-        yield from reversed(self._content['entries'])
+        for entry_content in reversed(self._content['entries']):
+            yield StreamEntry(entry_content)
 
 class EventStoreClient:
 
@@ -55,19 +71,26 @@ class EventStoreClient:
         uri = self.base_url + '/streams/' + stream_name
         return self.get_stream_page(uri)
 
+    def fetch_events(self, stream_entries):
+        for entry in stream_entries:
+            headers = {'Accept': 'application/json'}
+            response = requests.get(entry.links['alternate'], headers=headers)
+            content = response.json()
+            yield entry.summary, content
+
     def get_all_events(self, stream_name):
         head = self.get_stream_head(stream_name)
         uri = head.links.get('last', None)
         while uri:
             current_page = self.get_stream_page(uri)
-            yield from current_page.entries()
+            yield from self.fetch_events(current_page.entries())
             uri = current_page.links.get('previous', None)
 
     def subscribe(self, stream_name, interval_seconds=1):
         last = self.get_stream_head(stream_name).links['previous']
         while True:
             page = self.get_stream_page(last)
-            yield from page.entries()
+            yield from self.fetch_events(page.entries())
 
             current = page.links.get('previous', last)
             if last == current:
