@@ -64,24 +64,20 @@ class EventStoreClient:
         }
         self.post_events(stream_name, [event])
 
-    # def get_stream_page_async(self, uri):
-    #     print('fetching stream page {}'.format(uri))
-    #     headers = {'Accept': 'application/vnd.eventstore.events+json'}
-    #     response = yield from aiohttp.request('get', uri, headers=headers)
-    #     content = yield from response.json()
-    #     print('received data for stream page {}'.format(uri))
-    #     return StreamPage(content)
+    def get_stream_page_async(self, uri):
+        headers = {'Accept': 'application/vnd.eventstore.events+json'}
+        response = yield from aiohttp.request('get', uri, headers=headers)
+        content = yield from response.json()
+        return StreamPage(content)
 
     # def get_stream_head_async(self, stream_name):
     #     uri = '{}/streams/{}'.format(self.base_url, stream_name)
     #     return self.get_stream_page_async(uri)
 
     def fetch_event_async(self, uri):
-        print('fetching data from {}'.format(uri))
         headers = {'Accept': 'application/json'}
         response = yield from aiohttp.request('get', uri, headers=headers)
         content = yield from response.json()
-        print('received data from {}'.format(uri))
         return (uri, content)
 
     @asyncio.coroutine
@@ -95,14 +91,21 @@ class EventStoreClient:
 
     def get_all_events_async(self, stream_name):
         loop = asyncio.get_event_loop()
-
         head = self.get_stream_head(stream_name)
         uri = head.links.get('last', None)
+        current_page = self.get_stream_page(uri)
 
-        while uri:
-            current_page = self.get_stream_page(uri)
-            yield from loop.run_until_complete(self.get_all_events_from_page(current_page))
-            uri = current_page.links.get('previous', None)
+        while 'previous' in current_page.links:
+            previous_uri = current_page.links['previous']
+
+            tasks = [
+                self.get_stream_page_async(previous_uri),
+                self.get_all_events_from_page(current_page)
+            ]
+
+            results = loop.run_until_complete(asyncio.gather(*tasks))
+            current_page, events = results
+            yield from events
 
     def get_stream_page(self, uri):
         headers = {'Accept': 'application/vnd.eventstore.events+json'}
