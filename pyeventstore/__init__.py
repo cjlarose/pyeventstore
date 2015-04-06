@@ -8,10 +8,7 @@ from requests.exceptions import HTTPError
 import aiohttp
 
 def links_as_dict(links):
-    result = {}
-    for link in links:
-        result[link['relation']] = link['uri']
-    return result
+    return {link['relation']: link['uri'] for link in links}
 
 class StreamEntry:
     def __init__(self, content):
