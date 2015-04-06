@@ -4,6 +4,7 @@ import aiohttp
 
 from pyeventstore.stream_page import StreamPage
 
+
 @asyncio.coroutine
 def get_stream_page_async(uri):
     # print('getting stream page {}'.format(uri))
@@ -12,6 +13,7 @@ def get_stream_page_async(uri):
     content = yield from response.json()
     # print('received stream page {}'.format(uri))
     return StreamPage(content)
+
 
 @asyncio.coroutine
 def fetch_event_async(uri):
@@ -22,6 +24,7 @@ def fetch_event_async(uri):
     # print('received content from {}'.format(uri))
     return (uri, content)
 
+
 @asyncio.coroutine
 def get_all_events_from_page(page):
     coroutines = []
@@ -30,6 +33,7 @@ def get_all_events_from_page(page):
         coroutines.append(task)
 
     return (yield from asyncio.gather(*coroutines))
+
 
 @asyncio.coroutine
 def get_all_events_async(head_uri, on_event):
@@ -47,13 +51,13 @@ def get_all_events_async(head_uri, on_event):
             yield from q.put(current_page)
             previous_uri = current_page.links['previous']
             current_page = yield from get_stream_page_async(previous_uri)
-        yield from q.put(None) # indicate last page
+        yield from q.put(None)  # indicate last page
 
     @asyncio.coroutine
     def fetch_events():
         while True:
             page = yield from q.get()
-            if page is None: # last page
+            if page is None:  # last page
                 return
             events = yield from get_all_events_from_page(page)
             for event in events:

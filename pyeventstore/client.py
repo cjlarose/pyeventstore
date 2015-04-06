@@ -9,6 +9,7 @@ from requests.exceptions import HTTPError
 from pyeventstore.events import get_all_events_async
 from pyeventstore.stream_page import StreamPage
 
+
 class Client:
 
     def __init__(self, host, secure=False, port=2113):
@@ -16,7 +17,7 @@ class Client:
         self.base_url = proto + "://" + host + ":" + str(port)
 
     def post_events(self, stream_name, events):
-        url = self.base_url +  "/streams/" + stream_name
+        url = '{}/streams/{}'.format(self.base_url, stream_name)
         headers = {'Content-Type': 'application/vnd.eventstore.events+json'}
         response = requests.post(url, headers=headers, data=json.dumps(events))
         if response.status_code >= 400 and response.status_code < 500:

@@ -1,6 +1,7 @@
 def links_as_dict(links):
     return {link['relation']: link['uri'] for link in links}
 
+
 class StreamEntry:
     def __init__(self, content):
         self._content = content
@@ -13,9 +14,10 @@ class StreamEntry:
             self._links = links_as_dict(self._content['links'])
         return self._links
 
+
 class StreamPage:
     def __init__(self, content):
-        self._content = content 
+        self._content = content
         self._links = None
 
     @property
@@ -27,4 +29,3 @@ class StreamPage:
     def entries(self):
         for entry_content in reversed(self._content['entries']):
             yield StreamEntry(entry_content)
-
