@@ -37,7 +37,7 @@ def get_all_events_from_page(page):
 
 @asyncio.coroutine
 def get_all_events_async(head_uri, on_event):
-    q = asyncio.Queue()
+    q = asyncio.Queue(5)
     head = yield from get_stream_page_async(head_uri)
     if 'last' in head.links:
         last = yield from get_stream_page_async(head.links['last'])
