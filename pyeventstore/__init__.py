@@ -101,7 +101,10 @@ class EventStoreClient:
     def get_all_events_async(self, stream_name, on_event):
         q = asyncio.Queue()
         head = yield from self.get_stream_head_async(stream_name)
-        last = yield from get_stream_page_async(head.links['last'])
+        if 'last' in head.links:
+            last = yield from get_stream_page_async(head.links['last'])
+        else:
+            last = head
 
         @asyncio.coroutine
         def follow_previous_links():
