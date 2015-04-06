@@ -142,14 +142,6 @@ class EventStoreClient:
             content = response.json()
             yield entry.summary, content
 
-    def get_all_events(self, stream_name):
-        head = self.get_stream_head(stream_name)
-        uri = head.links.get('last', None)
-        while uri:
-            current_page = self.get_stream_page(uri)
-            yield from self.fetch_events(current_page.entries())
-            uri = current_page.links.get('previous', None)
-
     def subscribe(self, stream_name, interval_seconds=1):
         last = None
         while last is None:
