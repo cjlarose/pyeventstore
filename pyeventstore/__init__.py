@@ -64,6 +64,7 @@ class EventStoreClient:
         }
         self.post_events(stream_name, [event])
 
+    @asyncio.coroutine
     def get_stream_page_async(self, uri):
         # print('getting stream page {}'.format(uri))
         headers = {'Accept': 'application/vnd.eventstore.events+json'}
@@ -72,10 +73,12 @@ class EventStoreClient:
         # print('received stream page {}'.format(uri))
         return StreamPage(content)
 
+    @asyncio.coroutine
     def get_stream_head_async(self, stream_name):
         uri = '{}/streams/{}'.format(self.base_url, stream_name)
-        return self.get_stream_page_async(uri)
+        return (yield from self.get_stream_page_async(uri))
 
+    @asyncio.coroutine
     def fetch_event_async(self, uri):
         # print('getting event data from {}'.format(uri))
         headers = {'Accept': 'application/json'}
