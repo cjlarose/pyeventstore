@@ -98,15 +98,14 @@ class EventStoreClient:
         q = asyncio.Queue()
         head = yield from self.get_stream_head_async(stream_name)
         last = yield from self.get_stream_page_async(head.links['last'])
-        yield from q.put(last)
 
         @asyncio.coroutine
         def follow_previous_links():
             current_page = last
             while 'previous' in current_page.links:
+                yield from q.put(current_page)
                 previous_uri = current_page.links['previous']
                 current_page = yield from self.get_stream_page_async(previous_uri)
-                yield from q.put(current_page)
             yield from q.put(None) # indicate last page
 
         @asyncio.coroutine
