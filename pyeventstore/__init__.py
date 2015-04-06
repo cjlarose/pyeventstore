@@ -67,6 +67,36 @@ def get_all_events_from_page(page):
 
     return (yield from asyncio.gather(*coroutines))
 
+@asyncio.coroutine
+def get_all_events_async(head_uri, on_event):
+    q = asyncio.Queue()
+    head = yield from get_stream_page_async(head_uri)
+    if 'last' in head.links:
+        last = yield from get_stream_page_async(head.links['last'])
+    else:
+        last = head
+
+    @asyncio.coroutine
+    def follow_previous_links():
+        current_page = last
+        while 'previous' in current_page.links:
+            yield from q.put(current_page)
+            previous_uri = current_page.links['previous']
+            current_page = yield from get_stream_page_async(previous_uri)
+        yield from q.put(None) # indicate last page
+
+    @asyncio.coroutine
+    def fetch_events():
+        while True:
+            page = yield from q.get()
+            if page is None: # last page
+                return
+            events = yield from get_all_events_from_page(page)
+            for event in events:
+                on_event(event)
+
+    asyncio.async(follow_previous_links())
+    yield from fetch_events()
 
 class EventStoreClient:
 
@@ -92,41 +122,13 @@ class EventStoreClient:
         }
         self.post_events(stream_name, [event])
 
-    @asyncio.coroutine
-    def get_stream_head_async(self, stream_name):
-        uri = '{}/streams/{}'.format(self.base_url, stream_name)
-        return (yield from get_stream_page_async(uri))
+    def stream_head_uri(self, stream_name):
+        return '{}/streams/{}'.format(self.base_url, stream_name)
 
     @asyncio.coroutine
     def get_all_events_async(self, stream_name, on_event):
-        q = asyncio.Queue()
-        head = yield from self.get_stream_head_async(stream_name)
-        if 'last' in head.links:
-            last = yield from get_stream_page_async(head.links['last'])
-        else:
-            last = head
-
-        @asyncio.coroutine
-        def follow_previous_links():
-            current_page = last
-            while 'previous' in current_page.links:
-                yield from q.put(current_page)
-                previous_uri = current_page.links['previous']
-                current_page = yield from get_stream_page_async(previous_uri)
-            yield from q.put(None) # indicate last page
-
-        @asyncio.coroutine
-        def fetch_events():
-            while True:
-                page = yield from q.get()
-                if page is None: # last page
-                    return
-                events = yield from get_all_events_from_page(page)
-                for event in events:
-                    on_event(event)
-
-        asyncio.async(follow_previous_links())
-        yield from fetch_events()
+        head_uri = self.stream_head_uri(stream_name)
+        yield from get_all_events_async(head_uri, on_event)
 
     def get_stream_page(self, uri):
         headers = {'Accept': 'application/vnd.eventstore.events+json'}
