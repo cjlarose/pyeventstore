@@ -94,7 +94,7 @@ class EventStoreClient:
         return (yield from asyncio.gather(*coroutines))
 
     @asyncio.coroutine
-    def get_all_events_async(self, stream_name):
+    def get_all_events_async(self, stream_name, on_event):
         q = asyncio.Queue()
         head = yield from self.get_stream_head_async(stream_name)
         last = yield from self.get_stream_page_async(head.links['last'])
@@ -115,7 +115,8 @@ class EventStoreClient:
                 if page is None: # last page
                     return
                 events = yield from self.get_all_events_from_page(page)
-                print(events)
+                for event in events:
+                    on_event(event)
 
         asyncio.async(follow_previous_links())
         yield from fetch_events()
