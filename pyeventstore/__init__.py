@@ -40,6 +40,34 @@ class StreamPage:
         for entry_content in reversed(self._content['entries']):
             yield StreamEntry(entry_content)
 
+@asyncio.coroutine
+def get_stream_page_async(uri):
+    # print('getting stream page {}'.format(uri))
+    headers = {'Accept': 'application/vnd.eventstore.events+json'}
+    response = yield from aiohttp.request('get', uri, headers=headers)
+    content = yield from response.json()
+    # print('received stream page {}'.format(uri))
+    return StreamPage(content)
+
+@asyncio.coroutine
+def fetch_event_async(uri):
+    # print('getting event data from {}'.format(uri))
+    headers = {'Accept': 'application/json'}
+    response = yield from aiohttp.request('get', uri, headers=headers)
+    content = yield from response.json()
+    # print('received content from {}'.format(uri))
+    return (uri, content)
+
+@asyncio.coroutine
+def get_all_events_from_page(page):
+    coroutines = []
+    for entry in page.entries():
+        task = asyncio.Task(fetch_event_async(entry.links['alternate']))
+        coroutines.append(task)
+
+    return (yield from asyncio.gather(*coroutines))
+
+
 class EventStoreClient:
 
     def __init__(self, host, secure=False, port=2113):
@@ -65,42 +93,15 @@ class EventStoreClient:
         self.post_events(stream_name, [event])
 
     @asyncio.coroutine
-    def get_stream_page_async(self, uri):
-        # print('getting stream page {}'.format(uri))
-        headers = {'Accept': 'application/vnd.eventstore.events+json'}
-        response = yield from aiohttp.request('get', uri, headers=headers)
-        content = yield from response.json()
-        # print('received stream page {}'.format(uri))
-        return StreamPage(content)
-
-    @asyncio.coroutine
     def get_stream_head_async(self, stream_name):
         uri = '{}/streams/{}'.format(self.base_url, stream_name)
-        return (yield from self.get_stream_page_async(uri))
-
-    @asyncio.coroutine
-    def fetch_event_async(self, uri):
-        # print('getting event data from {}'.format(uri))
-        headers = {'Accept': 'application/json'}
-        response = yield from aiohttp.request('get', uri, headers=headers)
-        content = yield from response.json()
-        # print('received content from {}'.format(uri))
-        return (uri, content)
-
-    @asyncio.coroutine
-    def get_all_events_from_page(self, page):
-        coroutines = []
-        for entry in page.entries():
-            task = asyncio.Task(self.fetch_event_async(entry.links['alternate']))
-            coroutines.append(task)
-
-        return (yield from asyncio.gather(*coroutines))
+        return (yield from get_stream_page_async(uri))
 
     @asyncio.coroutine
     def get_all_events_async(self, stream_name, on_event):
         q = asyncio.Queue()
         head = yield from self.get_stream_head_async(stream_name)
-        last = yield from self.get_stream_page_async(head.links['last'])
+        last = yield from get_stream_page_async(head.links['last'])
 
         @asyncio.coroutine
         def follow_previous_links():
@@ -108,7 +109,7 @@ class EventStoreClient:
             while 'previous' in current_page.links:
                 yield from q.put(current_page)
                 previous_uri = current_page.links['previous']
-                current_page = yield from self.get_stream_page_async(previous_uri)
+                current_page = yield from get_stream_page_async(previous_uri)
             yield from q.put(None) # indicate last page
 
         @asyncio.coroutine
@@ -117,7 +118,7 @@ class EventStoreClient:
                 page = yield from q.get()
                 if page is None: # last page
                     return
-                events = yield from self.get_all_events_from_page(page)
+                events = yield from get_all_events_from_page(page)
                 for event in events:
                     on_event(event)
 
