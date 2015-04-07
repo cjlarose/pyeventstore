@@ -4,6 +4,7 @@ import aiohttp
 
 from pyeventstore.stream_page import StreamPage
 
+
 class Subscription:
     def __init__(self, event_queue):
         self.event_queue = event_queue
@@ -11,6 +12,7 @@ class Subscription:
     @asyncio.coroutine
     def get(self):
         return (yield from self.event_queue.get())
+
 
 @asyncio.coroutine
 def get_stream_page(uri):
