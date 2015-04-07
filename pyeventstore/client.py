@@ -38,9 +38,9 @@ class Client:
         return '{}/streams/{}'.format(self.base_url, stream_name)
 
     @asyncio.coroutine
-    def get_all_events(self, stream_name, on_event):
+    def get_all_events(self, stream_name):
         head_uri = self.stream_head_uri(stream_name)
-        yield from get_all_events(head_uri, on_event)
+        return (yield from get_all_events(head_uri))
 
     def get_stream_page(self, uri):
         headers = {'Accept': 'application/vnd.eventstore.events+json'}
