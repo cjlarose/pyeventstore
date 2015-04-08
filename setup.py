@@ -6,5 +6,7 @@ setup(
     description = "Client library for Event Store",
     author = "Chris LaRose",
     author_email = "cjlarose@gmail.com",
-    url = "https://github.com/cjlarose/pyeventstore"
+    url = "https://github.com/cjlarose/pyeventstore",
+    install_requires = ['requests',
+                        'aiohttp']
 )
