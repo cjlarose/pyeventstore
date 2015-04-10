@@ -79,3 +79,26 @@ def get_all_events(head_uri):
     asyncio.async(fetch_events())
 
     return Subscription(event_queue)
+
+
+@asyncio.coroutine
+def start_subscription(head_uri, interval_seconds):
+    # TODO: loop until non-404
+    head = yield from get_stream_page(head_uri)
+    event_queue = asyncio.Queue(20)
+
+    @asyncio.coroutine
+    def fetch_events():
+        last = head.links['previous']
+        while True:
+            page = yield from get_stream_page(last)
+            events = yield from get_all_events_from_page(page)
+            for event in events:
+                yield from event_queue.put(event)
+            current = page.links.get('previous', last)
+            if last == current:
+                yield from asyncio.sleep(interval_seconds)
+            last = current
+
+    asyncio.async(fetch_events())
+    return Subscription(event_queue)

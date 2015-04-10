@@ -6,7 +6,7 @@ import json
 import requests
 from requests.exceptions import HTTPError
 
-from pyeventstore.events import get_all_events
+from pyeventstore.events import get_all_events, start_subscription
 from pyeventstore.stream_page import StreamPage
 
 
@@ -79,6 +79,11 @@ class Client:
             if last == current:
                 time.sleep(interval_seconds)
             last = current
+
+    @asyncio.coroutine
+    def subscribe_async(self, stream_name, interval_seconds=1):
+        head_uri = self.stream_head_uri(stream_name)
+        return (yield from start_subscription(head_uri, interval_seconds))
 
     def get_projection(self, projection_name):
         uri = self.base_url + '/projection/{}'.format(projection_name)
