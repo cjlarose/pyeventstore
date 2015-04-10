@@ -13,10 +13,10 @@ class Client:
 
     def __init__(self, host, secure=False, port=2113):
         proto = "https" if secure else "http"
-        self.base_url = proto + "://" + host + ":" + str(port)
+        self.uri_base = '{}://{}:{}'.format(proto, host, port)
 
     def post_events(self, stream_name, events):
-        url = '{}/streams/{}'.format(self.base_url, stream_name)
+        url = '{}/streams/{}'.format(self.uri_base, stream_name)
         headers = {'Content-Type': 'application/vnd.eventstore.events+json'}
         response = requests.post(url, headers=headers, data=json.dumps(events))
         if response.status_code >= 400 and response.status_code < 500:
@@ -34,7 +34,7 @@ class Client:
         self.post_events(stream_name, [event])
 
     def stream_head_uri(self, stream_name):
-        return '{}/streams/{}'.format(self.base_url, stream_name)
+        return '{}/streams/{}'.format(self.uri_base, stream_name)
 
     @asyncio.coroutine
     def get_all_events(self, stream_name):
@@ -47,13 +47,13 @@ class Client:
         return (yield from start_subscription(head_uri, interval_seconds))
 
     def get_projection(self, projection_name):
-        uri = self.base_url + '/projection/{}'.format(projection_name)
+        uri = self.uri_base + '/projection/{}'.format(projection_name)
         headers = {'Accept': 'application/json'}
         response = requests.get(uri, headers=headers)
         return response.json()
 
     def get_projection_state(self, projection_name, partition=None):
-        uri = self.base_url + '/projection/{}/state'.format(projection_name)
+        uri = self.uri_base + '/projection/{}/state'.format(projection_name)
         headers = {'Accept': 'application/json'}
         params = {}
         if partition:
