@@ -1,5 +1,4 @@
 import asyncio
-import time
 import uuid
 import json
 
@@ -41,44 +40,6 @@ class Client:
     def get_all_events(self, stream_name):
         head_uri = self.stream_head_uri(stream_name)
         return (yield from get_all_events(head_uri))
-
-    def get_stream_page(self, uri):
-        headers = {'Accept': 'application/vnd.eventstore.events+json'}
-        response = requests.get(uri, headers=headers)
-        response.raise_for_status()
-        content = response.json()
-        return StreamPage(content)
-
-    def get_stream_head(self, stream_name):
-        uri = self.base_url + '/streams/' + stream_name
-        return self.get_stream_page(uri)
-
-    def fetch_events(self, stream_entries):
-        for entry in stream_entries:
-            headers = {'Accept': 'application/json'}
-            response = requests.get(entry.links['alternate'], headers=headers)
-            content = response.json()
-            yield entry.summary, content
-
-    def subscribe(self, stream_name, interval_seconds=1):
-        last = None
-        while last is None:
-            try:
-                last = self.get_stream_head(stream_name).links['previous']
-            except HTTPError as e:
-                if e.response.status_code == 404:
-                    time.sleep(interval_seconds)
-                else:
-                    raise e
-
-        while True:
-            page = self.get_stream_page(last)
-            yield from self.fetch_events(page.entries())
-
-            current = page.links.get('previous', last)
-            if last == current:
-                time.sleep(interval_seconds)
-            last = current
 
     @asyncio.coroutine
     def subscribe_async(self, stream_name, interval_seconds=1):
