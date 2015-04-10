@@ -42,7 +42,7 @@ class Client:
         return (yield from get_all_events(head_uri))
 
     @asyncio.coroutine
-    def subscribe_async(self, stream_name, interval_seconds=1):
+    def subscribe(self, stream_name, interval_seconds=1):
         head_uri = self.stream_head_uri(stream_name)
         return (yield from start_subscription(head_uri, interval_seconds))
 
