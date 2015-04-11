@@ -2,14 +2,9 @@ import asyncio
 import uuid
 import json
 
-import requests
-from requests.exceptions import HTTPError
-
 from pyeventstore.events import (get_all_events,
                                  start_subscription,
                                  publish_events)
-from pyeventstore.stream_page import StreamPage
-
 
 class Client:
 
@@ -34,18 +29,3 @@ class Client:
     def subscribe(self, stream_name, interval_seconds=1):
         head_uri = self.stream_head_uri(stream_name)
         return (yield from start_subscription(head_uri, interval_seconds))
-
-    def get_projection(self, projection_name):
-        uri = self.uri_base + '/projection/{}'.format(projection_name)
-        headers = {'Accept': 'application/json'}
-        response = requests.get(uri, headers=headers)
-        return response.json()
-
-    def get_projection_state(self, projection_name, partition=None):
-        uri = self.uri_base + '/projection/{}/state'.format(projection_name)
-        headers = {'Accept': 'application/json'}
-        params = {}
-        if partition:
-            params['partition'] = partition
-        response = requests.get(uri, headers=headers, params=params)
-        return response.json()
