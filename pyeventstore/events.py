@@ -1,8 +1,12 @@
 import asyncio
+import json
+from collections import namedtuple
 
 import aiohttp
 
 from pyeventstore.stream_page import StreamPage
+
+Event = namedtuple('Event', ['id', 'type', 'data'])
 
 
 class Subscription:
@@ -102,3 +106,23 @@ def start_subscription(head_uri, interval_seconds):
 
     asyncio.async(fetch_events())
     return Subscription(event_queue)
+
+
+@asyncio.coroutine
+def publish_events(head_uri, events):
+    def event_to_json(event):
+        return {
+            'eventId': event.id,
+            'eventType': event.type,
+            'data': event.data
+        }
+
+    headers = {'Content-Type': 'application/vnd.eventstore.events+json'}
+    payload = json.dumps([event_to_json(e) for e in events])
+    response = yield from aiohttp.request('post',
+                                          head_uri,
+                                          headers=headers,
+                                          data=payload)
+
+    if response.status >= 400 and response.status < 500:
+        raise ValueError(response.reason)
