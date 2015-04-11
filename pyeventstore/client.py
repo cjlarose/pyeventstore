@@ -5,7 +5,9 @@ import json
 import requests
 from requests.exceptions import HTTPError
 
-from pyeventstore.events import get_all_events, start_subscription
+from pyeventstore.events import (get_all_events,
+                                 start_subscription,
+                                 publish_events)
 from pyeventstore.stream_page import StreamPage
 
 
@@ -15,23 +17,10 @@ class Client:
         proto = "https" if secure else "http"
         self.uri_base = '{}://{}:{}'.format(proto, host, port)
 
-    def post_events(self, stream_name, events):
-        url = '{}/streams/{}'.format(self.uri_base, stream_name)
-        headers = {'Content-Type': 'application/vnd.eventstore.events+json'}
-        response = requests.post(url, headers=headers, data=json.dumps(events))
-        if response.status_code >= 400 and response.status_code < 500:
-            raise ValueError(response.reason)
-
-    def publish_event(self, stream_name, event_type, data, event_id=None):
-        if event_id is None:
-            event_id = str(uuid.uuid4())
-
-        event = {
-            'eventId': event_id,
-            'eventType': event_type,
-            'data': data
-        }
-        self.post_events(stream_name, [event])
+    @asyncio.coroutine
+    def publish_events(self, stream_name, events):
+        uri = self.stream_head_uri(stream_name)
+        yield from publish_events(uri, events)
 
     def stream_head_uri(self, stream_name):
         return '{}/streams/{}'.format(self.uri_base, stream_name)
