@@ -7,6 +7,8 @@ Experimental client library for [Event Store][1]. The package depends on
 
 ## Examples
 
+### Reading events
+
 Reading all events from a stream
 
 ```python
@@ -39,4 +41,21 @@ def handle_events():
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(handle_events())
+```
+
+### Publishing events
+
+```python
+import pyeventstore, asyncio, uuid
+event_store = pyeventstore.Client("192.168.59.103")
+
+def publish_event():
+    event_data = {'pony': 'bill', 'distance': 12}
+    event = pyeventstore.Event(id=str(uuid.uuid4()),
+                               type='PonyJumped',
+                               data=event_data)
+    yield from event_store.publish_events('ponies', [event])
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(publish_event())
 ```
