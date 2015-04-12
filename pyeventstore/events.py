@@ -31,11 +31,11 @@ def get_stream_page(uri):
 @asyncio.coroutine
 def fetch_event(uri):
     # print('getting event data from {}'.format(uri))
-    headers = {'Accept': 'application/json'}
+    headers = {'Accept': 'application/vnd.eventstore.event+json'}
     response = yield from aiohttp.request('get', uri, headers=headers)
     content = yield from response.json()
     # print('received content from {}'.format(uri))
-    return (uri, content)
+    return Event(id=None, type=content['eventType'], data=content['data'])
 
 
 @asyncio.coroutine
